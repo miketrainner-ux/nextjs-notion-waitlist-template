@@ -43,11 +43,14 @@
 // ============== CONFIG ==============
 const CONFIG = {
   CSV_NAME: 'MT_OS_roteamento_v2.csv',
+  RENAME_CSV_NAME: 'MT_OS_renomeacao.csv',
   DRY_RUN: true,
-  MIN_CONFIANCA: 80,
-  DESTINOS_PERMITIDOS: [],  // [] = todos; ou ex: ['00_SYSTEM', '90_ARCHIVE']
-  DESTINOS_BLOQUEADOS: [],  // ex: ['99_REVIEW'] para deixar review pra depois
+  MIN_CONFIANCA: 80,                  // % mínima p/ migrar pastas
+  RENAME_CONFIANCAS: ['ALTA', 'MÉDIA'],  // níveis aceitos p/ renomear arquivos
+  DESTINOS_PERMITIDOS: [],
+  DESTINOS_BLOQUEADOS: [],
   MAX_PASTAS_POR_RUN: 200,
+  MAX_RENOMEACOES_POR_RUN: 100,
   LOG_A_CADA: 25,
 };
 // ====================================
@@ -160,6 +163,106 @@ function testarUmaLinha(folderId) {
   if (!r) { log_(`ID não encontrado no CSV: ${folderId}`); return; }
   log_(`Linha: ${JSON.stringify(r, null, 2)}`);
   log_(`Resultado: ${moverPasta_(r)}`);
+}
+
+/**
+ * ============================================================
+ * RENOMEAR ARQUIVOS — lê MT_OS_renomeacao.csv e aplica nomes novos.
+ * ============================================================
+ * Filtros: CONFIG.RENAME_CONFIANCAS (default: ALTA + MÉDIA)
+ *          CONFIG.DRY_RUN
+ *          CONFIG.MAX_RENOMEACOES_POR_RUN
+ *
+ * Garantias:
+ *  ✓ Só renomeia (setName) — não move, não deleta, não toca conteúdo
+ *  ✓ Pula se nome já está como o sugerido
+ *  ✓ Pula se arquivo não existe mais
+ *  ✓ Pula se nome sugerido está vazio ou igual ao atual
+ */
+function renomearArquivos() {
+  const t0 = Date.now();
+  log_(`\n${'='.repeat(60)}`);
+  log_(`MT.OS Renomeação — ${CONFIG.DRY_RUN ? 'DRY RUN' : 'EXECUÇÃO REAL'}`);
+  log_(`Confiança aceita: ${CONFIG.RENAME_CONFIANCAS.join(', ')}`);
+  log_(`${'='.repeat(60)}\n`);
+
+  const rows = lerCsv_(CONFIG.RENAME_CSV_NAME);
+  log_(`CSV carregado: ${rows.length} linhas`);
+
+  const elegiveis = rows.filter(r => filtroRename_(r));
+  log_(`Elegíveis após filtro: ${elegiveis.length}`);
+  const lote = elegiveis.slice(0, CONFIG.MAX_RENOMEACOES_POR_RUN);
+  log_(`Processando ${lote.length} nesta execução\n`);
+
+  const stats = { ok: 0, jaRenomeado: 0, sourceNotFound: 0, nomeIgual: 0, vazio: 0, erro: 0, dryRun: 0 };
+
+  for (let i = 0; i < lote.length; i++) {
+    const r = lote[i];
+    try {
+      const res = renomearArquivo_(r);
+      stats[res] = (stats[res] || 0) + 1;
+    } catch (e) {
+      stats.erro++;
+      log_(`  ❌ ERRO em ${r.file_id} (${r.nome_antigo}): ${e.message}`);
+    }
+    if ((i + 1) % CONFIG.LOG_A_CADA === 0) {
+      log_(`  ... ${i + 1}/${lote.length}`);
+    }
+  }
+
+  const dt = ((Date.now() - t0) / 1000).toFixed(1);
+  log_(`\n${'='.repeat(60)}`);
+  log_(`Concluído em ${dt}s`);
+  log_(`Renomeados com sucesso: ${stats.ok}`);
+  log_(`Já tinham o nome novo: ${stats.jaRenomeado || 0}`);
+  log_(`Nome novo vazio/igual: ${(stats.nomeIgual || 0) + (stats.vazio || 0)}`);
+  log_(`Source não encontrado: ${stats.sourceNotFound || 0}`);
+  log_(`Dry-run (não executou): ${stats.dryRun || 0}`);
+  log_(`Erros: ${stats.erro}`);
+  log_(`Restantes na fila: ${elegiveis.length - lote.length}`);
+  log_(`${'='.repeat(60)}`);
+}
+
+function filtroRename_(r) {
+  if (!r.file_id || !r.nome_novo_sugerido) return false;
+  const conf = String(r.confianca || '').toUpperCase();
+  return CONFIG.RENAME_CONFIANCAS.some(c => conf.indexOf(c) === 0);
+}
+
+function renomearArquivo_(r) {
+  let arq;
+  try { arq = DriveApp.getFileById(r.file_id); }
+  catch (e) { return 'sourceNotFound'; }
+
+  const nomeAtual = arq.getName();
+  const nomeNovo = String(r.nome_novo_sugerido || '').trim();
+  if (!nomeNovo) return 'vazio';
+  if (nomeAtual === nomeNovo) return 'jaRenomeado';
+
+  if (CONFIG.DRY_RUN) {
+    log_(`  [DRY] "${nomeAtual.substring(0, 40)}" → "${nomeNovo.substring(0, 50)}"`);
+    return 'dryRun';
+  }
+
+  arq.setName(nomeNovo);
+  return 'ok';
+}
+
+/**
+ * Prévia de renomeações: mostra distribuição por confiança e quantos serão tocados.
+ */
+function previaRenomeacao() {
+  const rows = lerCsv_(CONFIG.RENAME_CSV_NAME);
+  const eleg = rows.filter(r => filtroRename_(r));
+  const byConf = {};
+  rows.forEach(r => {
+    const k = String(r.confianca || '').split(' ')[0] || 'desconhecida';
+    byConf[k] = (byConf[k] || 0) + 1;
+  });
+  log_(`\nTotal no CSV: ${rows.length}`);
+  log_(`Elegíveis com filtro atual (${CONFIG.RENAME_CONFIANCAS.join(',')}): ${eleg.length}`);
+  log_(`\nDistribuição por confiança:`);
+  Object.entries(byConf).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => log_(`  ${v.toString().padStart(5)}  ${k}`));
 }
 
 /**
