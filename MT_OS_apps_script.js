@@ -277,3 +277,127 @@ function previaDistribuicao() {
   Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => log_(`  ${v.toString().padStart(5)}  →  ${k}`));
   log_(`Total elegível: ${eleg.length} de ${rows.length}`);
 }
+
+/**
+ * ============================================================
+ * DESIGN SYSTEM MT.OS — Cores + Ícones por categoria
+ * ============================================================
+ *
+ * REQUER habilitar Advanced Drive Service:
+ *   No editor → Serviços (+) → Drive API → Adicionar (id: Drive)
+ *
+ * Cores: paleta oficial Drive (folderColorRgb).
+ * Ícones: emojis universais prefixados ao nome da pasta.
+ *
+ * EXECUTE em ordem:
+ *   1) aplicarCoresMTOS()    — pinta 11 mães + sub-mães-chave
+ *   2) aplicarIconesMTOS()   — prefixa emoji ao nome
+ *
+ * SEGURANÇA: só altera metadata (cor) e nome (prefixo emoji).
+ * Não move, não deleta, não toca conteúdo. DRY_RUN respeitado.
+ *
+ * LÓGICA SEMÂNTICA DE CORES:
+ *   AZUL   = sistema/infra (frio, estável)
+ *   ROXO   = inbox/transição (em processamento)
+ *   LARANJA= projetos ativos (energia, prazo)
+ *   VERDE  = áreas da vida (crescimento contínuo)
+ *   AMARELO= conhecimento (sabedoria, atenção)
+ *   VERMELHO=criação (paixão, output autoral)
+ *   ROSA   = mídia (visual, sensorial)
+ *   CINZA  = negócio (formal, profissional)
+ *   MARROM = pessoal (íntimo, terra)
+ *   CINZA-CLARO=arquivo (dormente)
+ *   AREIA  = revisão (atenção requerida)
+ */
+
+const MTOS_DESIGN = {
+  // ===== 11 MÃES OFICIAIS =====
+  '1B6aUQRoESqp8o2tarlse5zCgd12Arc5Q': { nome: '00_SYSTEM',    icone: '⚙️', cor: '#4986e7' },
+  '1CJImEH2p6phjfuYWDCGXt_pQLgczcvex': { nome: '10_INBOX',     icone: '📥', cor: '#b99aff' },
+  '12gIwX4N0fL-0-erA-KStNvTP6SyvZG__': { nome: '20_PROJECTS',  icone: '🚀', cor: '#ff7537' },
+  '1e5BK2bCjDsqzkl08j6DqFHiXo-y02WJX': { nome: '40_KNOWLEDGE', icone: '📚', cor: '#ffad46' },
+  '15N8xPKHgfnOww38XZXdmhLYv6VKMiuYY': { nome: '50_CREATION',  icone: '🎨', cor: '#f83a22' },
+  '1Sg3jseMMEDuMo9Fc_Ffr7hDqHlXzIE-A': { nome: '60_MEDIA',     icone: '🎬', cor: '#f691b2' },
+  '1g6VsRP42__bKHOj2tqHPPeg-fg2EsGkT': { nome: '70_BUSINESS',  icone: '💼', cor: '#8f8f8f' },
+  '1g2HGeIiFgKf32IeeUJ1mvHO2MFpOcJHO': { nome: '80_PERSONAL',  icone: '❤️', cor: '#ac725e' },
+  '1b2pFAIL6Cgc6e_t-B-GrZFTkTEwB9QFe': { nome: '90_ARCHIVE',   icone: '📦', cor: '#cabdbf' },
+  '156bSZj5fqG0pi7SFNFLriuX0hhLPmtnl': { nome: '99_REVIEW',    icone: '⚠️', cor: '#fbe983' },
+
+  // ===== 30_AREAS — três tons de verde =====
+  '1sKg_cI7ZnP8Ql6YafIOFyfSs7XEwzqM8': { nome: 'Corpo',      icone: '💪', cor: '#16a765' },
+  '1pggTB9hPdF7f50-Zzt7f74GWW1I4fqp0': { nome: 'Mente',      icone: '🧠', cor: '#42d692' },
+  '1JS6C8Y9czSd2Zyn2poafQ964C3c94VL2': { nome: 'Observador', icone: '👁️', cor: '#b3dc6c' },
+
+  // ===== 20_PROJECTS — sub-marcas (laranja/coral) =====
+  '1eXAXMf-Mb1Edl2qlMw8x3MHDPdSxSnf1': { nome: 'MT.OS',                       icone: '🧬', cor: '#ff7537' },
+  '1RMPhZV0J2QbRd2oAAhteyclJdcvZuPHo': { nome: 'MT Sports',                   icone: '🏃', cor: '#ff7537' },
+  '1S2ag8jqfISHo6f71Gyg5ducQhuIZPkKR': { nome: 'Clientes',                    icone: '🤝', cor: '#ff7537' },
+  '1SUn6jcqVWq1KCqHyXk1BwkIUVLeX55l6': { nome: 'Michael Trainer Inteligente', icone: '🤖', cor: '#fa573c' },
+
+  // ===== 40_KNOWLEDGE — saberes =====
+  '1u1Bw8iJyiHA9tiqvMHwy1YLR1xNVpwOQ': { nome: 'Livros',       icone: '📖', cor: '#fad165' },
+  '1osFiWei1Ths_GO9Kao1ZB2V7cIdC5-3c': { nome: 'Matricologia', icone: '🌐', cor: '#fbe983' },
+
+  // ===== 60_MEDIA — Fotos =====
+  '1XnU-r5_jas_YWvbQnH_-RdcUtXyMT7B0': { nome: 'Fotos', icone: '📸', cor: '#f691b2' },
+
+  // ===== 70_BUSINESS — Financeiro =====
+  '11LmyhhlH_wVdCmdYvEzlObIrBk_rW6L-': { nome: 'Financeiro', icone: '💰', cor: '#cabdbf' },
+
+  // ===== 90_ARCHIVE — Repositório Permanente =====
+  '1Qt0CTYoPTdkplGMXO0SiXntVe1oWU4Xe': { nome: 'Repositório Permanente', icone: '🗄️', cor: '#cabdbf' },
+};
+
+function aplicarCoresMTOS() {
+  log_(`\n${'='.repeat(60)}`);
+  log_(`MT.OS Design — Cores ${CONFIG.DRY_RUN ? '(DRY RUN)' : '(REAL)'}`);
+  log_(`${'='.repeat(60)}\n`);
+  let ok = 0, erro = 0, dry = 0;
+  for (const [id, spec] of Object.entries(MTOS_DESIGN)) {
+    try {
+      if (CONFIG.DRY_RUN) {
+        log_(`  [DRY] ${spec.nome.padEnd(40)} → ${spec.cor}`);
+        dry++; continue;
+      }
+      Drive.Files.update({ folderColorRgb: spec.cor }, id);
+      log_(`  ✓ ${spec.nome.padEnd(40)} → ${spec.cor}`);
+      ok++;
+    } catch (e) {
+      erro++;
+      log_(`  ❌ ${spec.nome}: ${e.message}`);
+    }
+  }
+  log_(`\nOK: ${ok} | DRY: ${dry} | Erros: ${erro} | Total: ${Object.keys(MTOS_DESIGN).length}`);
+}
+
+function aplicarIconesMTOS() {
+  log_(`\n${'='.repeat(60)}`);
+  log_(`MT.OS Design — Ícones ${CONFIG.DRY_RUN ? '(DRY RUN)' : '(REAL)'}`);
+  log_(`${'='.repeat(60)}\n`);
+  let ok = 0, ja = 0, erro = 0, dry = 0;
+  for (const [id, spec] of Object.entries(MTOS_DESIGN)) {
+    try {
+      const pasta = DriveApp.getFolderById(id);
+      const nomeAtual = pasta.getName();
+      if (nomeAtual.indexOf(spec.icone) === 0) { ja++; continue; }
+      const limpo = nomeAtual.replace(/^[\p{Emoji}\s]+/u, '').trim() || spec.nome;
+      const novoNome = `${spec.icone}  ${limpo}`;
+      if (CONFIG.DRY_RUN) {
+        log_(`  [DRY] "${nomeAtual}" → "${novoNome}"`);
+        dry++; continue;
+      }
+      pasta.setName(novoNome);
+      log_(`  ✓ ${novoNome}`);
+      ok++;
+    } catch (e) {
+      erro++;
+      log_(`  ❌ ${spec.nome}: ${e.message}`);
+    }
+  }
+  log_(`\nOK: ${ok} | Já tinham: ${ja} | DRY: ${dry} | Erros: ${erro}`);
+}
+
+function aplicarDesignCompleto() {
+  aplicarCoresMTOS();
+  aplicarIconesMTOS();
+}
