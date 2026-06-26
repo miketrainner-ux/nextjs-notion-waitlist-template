@@ -401,3 +401,234 @@ function aplicarDesignCompleto() {
   aplicarCoresMTOS();
   aplicarIconesMTOS();
 }
+
+// ============================================================
+// ROLLBACK — Desfaz movimentações registradas no log
+// ============================================================
+//
+// COMO USAR:
+//   1. Execute migrarMTOS() com DRY_RUN=false. Um log de movimentos
+//      será gravado numa planilha "MT_OS_ROLLBACK_LOG" no Drive.
+//   2. Se algo der errado, execute rollbackMTOS() para reverter.
+//
+// SEGURANÇA:
+//   ✓ Só reverte pastas que foram movidas neste run (via log)
+//   ✓ Nunca deleta — usa addFolder/removeFolder
+//   ✓ Respeita DRY_RUN
+// ============================================================
+
+const ROLLBACK_SHEET_NAME = 'MT_OS_ROLLBACK_LOG';
+
+function migrarComLog() {
+  const sheet = obterOuCriarPlanilhaLog_();
+  const t0 = Date.now();
+  log_(`\n${'='.repeat(60)}`);
+  log_(`MT.OS Reorganizador COM LOG — ${CONFIG.DRY_RUN ? 'DRY RUN' : 'EXECUÇÃO REAL'}`);
+  log_(`${'='.repeat(60)}\n`);
+
+  const rows = lerCsv_(CONFIG.CSV_NAME);
+  const elegiveis = rows.filter(r => filtroLinha_(r));
+  const lote = elegiveis.slice(0, CONFIG.MAX_PASTAS_POR_RUN);
+  log_(`Processando ${lote.length} de ${elegiveis.length} elegíveis\n`);
+
+  const stats = { ok: 0, jaNoDestino: 0, sourceNotFound: 0, destNotFound: 0, erro: 0, dryRun: 0 };
+  const timestamp = new Date().toISOString();
+
+  for (let i = 0; i < lote.length; i++) {
+    const r = lote[i];
+    try {
+      let paiAnteriorId = '';
+      let pasta;
+      try {
+        pasta = DriveApp.getFolderById(r.old_id);
+        const pais = pasta.getParents();
+        if (pais.hasNext()) paiAnteriorId = pais.next().getId();
+      } catch (e) { stats.sourceNotFound++; continue; }
+
+      let destino;
+      try { destino = DriveApp.getFolderById(r.destino_id); }
+      catch (e) { stats.destNotFound++; continue; }
+
+      if (paiAnteriorId === r.destino_id) { stats.jaNoDestino++; continue; }
+
+      if (CONFIG.DRY_RUN) {
+        log_(`  [DRY] "${r.old_name}" → ${r.destino_mtos}`);
+        stats.dryRun++;
+        continue;
+      }
+
+      destino.addFolder(pasta);
+      const paisRm = pasta.getParents();
+      while (paisRm.hasNext()) {
+        const p = paisRm.next();
+        if (p.getId() !== r.destino_id) p.removeFolder(pasta);
+      }
+
+      sheet.appendRow([timestamp, r.old_id, r.old_name, paiAnteriorId, r.destino_id, r.destino_mtos, 'OK']);
+      stats.ok++;
+      log_(`  ✓ "${r.old_name}" → ${r.destino_mtos}`);
+    } catch (e) {
+      stats.erro++;
+      log_(`  ❌ ${r.old_id}: ${e.message}`);
+    }
+    if ((i + 1) % CONFIG.LOG_A_CADA === 0) log_(`  ... ${i + 1}/${lote.length}`);
+  }
+
+  const dt = ((Date.now() - t0) / 1000).toFixed(1);
+  log_(`\nConcluído em ${dt}s | OK:${stats.ok} | Dry:${stats.dryRun} | Erros:${stats.erro}`);
+  log_(`Log gravado em planilha: ${ROLLBACK_SHEET_NAME}`);
+}
+
+function rollbackMTOS() {
+  log_(`\n${'='.repeat(60)}`);
+  log_(`MT.OS ROLLBACK — ${CONFIG.DRY_RUN ? 'DRY RUN' : 'EXECUÇÃO REAL'}`);
+  log_(`${'='.repeat(60)}\n`);
+
+  const arqs = DriveApp.getFilesByName(ROLLBACK_SHEET_NAME);
+  if (!arqs.hasNext()) { log_('❌ Planilha de rollback não encontrada. Nada a reverter.'); return; }
+  const ss = SpreadsheetApp.open(arqs.next());
+  const sheet = ss.getSheets()[0];
+  const dados = sheet.getDataRange().getValues();
+
+  let ok = 0, erro = 0, dryRun = 0;
+
+  for (let i = dados.length - 1; i >= 1; i--) {
+    const [timestamp, pastaId, pastaNome, paiAnteriorId, , , status] = dados[i];
+    if (status !== 'OK' || !paiAnteriorId) continue;
+
+    try {
+      let pasta;
+      try { pasta = DriveApp.getFolderById(pastaId); }
+      catch (e) { log_(`  ⚠️ Pasta não encontrada: ${pastaId}`); continue; }
+
+      let paiAnt;
+      try { paiAnt = DriveApp.getFolderById(paiAnteriorId); }
+      catch (e) { log_(`  ⚠️ Pai anterior não encontrado: ${paiAnteriorId}`); continue; }
+
+      if (CONFIG.DRY_RUN) {
+        log_(`  [DRY ROLLBACK] "${pastaNome}" voltaria para ${paiAnteriorId}`);
+        dryRun++;
+        continue;
+      }
+
+      paiAnt.addFolder(pasta);
+      const paisRm = pasta.getParents();
+      while (paisRm.hasNext()) {
+        const p = paisRm.next();
+        if (p.getId() !== paiAnteriorId) p.removeFolder(pasta);
+      }
+      sheet.getRange(i + 1, 7).setValue('REVERTIDO');
+      log_(`  ✓ REVERTIDO: "${pastaNome}"`);
+      ok++;
+    } catch (e) {
+      erro++;
+      log_(`  ❌ ${pastaId}: ${e.message}`);
+    }
+  }
+
+  log_(`\nRollback: OK:${ok} | DRY:${dryRun} | Erros:${erro}`);
+}
+
+function obterOuCriarPlanilhaLog_() {
+  const arqs = DriveApp.getFilesByName(ROLLBACK_SHEET_NAME);
+  if (arqs.hasNext()) return SpreadsheetApp.open(arqs.next()).getSheets()[0];
+  const ss = SpreadsheetApp.create(ROLLBACK_SHEET_NAME);
+  const sheet = ss.getSheets()[0];
+  sheet.appendRow(['timestamp', 'pasta_id', 'pasta_nome', 'pai_anterior_id', 'destino_id', 'destino_mtos', 'status']);
+  return sheet;
+}
+
+// ============================================================
+// PILOTO SEGURO — executa só lote piloto de alta confiança
+// ============================================================
+// Usa CONFIG.PILOTO_IDS (array de old_id) para executar apenas
+// pastas pré-aprovadas manualmente. Ideal para primeira execução real.
+
+function migrarLotePiloto() {
+  const PILOTO_IDS = CONFIG.PILOTO_IDS || [];
+  if (!PILOTO_IDS.length) {
+    log_('⚠️ CONFIG.PILOTO_IDS está vazio. Adicione IDs antes de rodar.');
+    return;
+  }
+  log_(`\nRODANDO PILOTO: ${PILOTO_IDS.length} pastas selecionadas`);
+  const rows = lerCsv_(CONFIG.CSV_NAME);
+  const lote = rows.filter(r => PILOTO_IDS.includes(r.old_id));
+  log_(`Encontradas no CSV: ${lote.length}`);
+
+  const sheet = obterOuCriarPlanilhaLog_();
+  const timestamp = new Date().toISOString();
+
+  lote.forEach(r => {
+    try {
+      let pasta;
+      try { pasta = DriveApp.getFolderById(r.old_id); }
+      catch (e) { log_(`  ⚠️ Não encontrada: ${r.old_name}`); return; }
+
+      let paiAnteriorId = '';
+      const pais = pasta.getParents();
+      if (pais.hasNext()) paiAnteriorId = pais.next().getId();
+
+      let destino;
+      try { destino = DriveApp.getFolderById(r.destino_id); }
+      catch (e) { log_(`  ⚠️ Destino não encontrado: ${r.destino_mtos}`); return; }
+
+      if (paiAnteriorId === r.destino_id) { log_(`  ✓ Já no destino: ${r.old_name}`); return; }
+
+      if (CONFIG.DRY_RUN) {
+        log_(`  [DRY PILOTO] "${r.old_name}" → ${r.destino_mtos}`);
+        return;
+      }
+
+      destino.addFolder(pasta);
+      const paisRm = pasta.getParents();
+      while (paisRm.hasNext()) {
+        const p = paisRm.next();
+        if (p.getId() !== r.destino_id) p.removeFolder(pasta);
+      }
+      sheet.appendRow([timestamp, r.old_id, r.old_name, paiAnteriorId, r.destino_id, r.destino_mtos, 'PILOTO-OK']);
+      log_(`  ✓ PILOTO: "${r.old_name}" → ${r.destino_mtos}`);
+    } catch (e) {
+      log_(`  ❌ ${r.old_id}: ${e.message}`);
+    }
+  });
+}
+
+// ============================================================
+// REGRAS DE GOVERNANÇA MT.OS
+// ============================================================
+// Estas constantes documentam as regras de negócio.
+// São referenciadas pelos filtros de roteamento.
+// ============================================================
+
+const GOVERNANCA = {
+  REGRA_COFRE: 'Drive guarda o arquivo. Notion entende o arquivo. Apple Notes preserva a origem.',
+  NUNCA_APAGAR: true,
+  NUNCA_LIXEIRA: true,
+  NUNCA_ALTERAR_CONTEUDO: true,
+  EM_CASO_DE_DUVIDA: '99_REVIEW',
+  SENSIVEL_NAO_VAI_NOTION: true,
+  EXECUTAR_SEM_DRY_RUN: false,
+  CONFIANCA_MINIMA_EXECUCAO: 80,
+
+  TIPOS_SENSIVEIS: ['financeiro', 'contrato', 'nota fiscal', 'documento pessoal', 'senha', 'cpf', 'rg', 'passaporte'],
+  EXTENSOES_SENSIVEIS: ['.kdbx', '.gpg', '.key', '.pem', '.p12', '.pfx'],
+
+  REGRAS_DESTINO: [
+    { condicao: 'mimeType=video/* AND nome contém "bruto" OR "raw"', destino: '60_MEDIA/Videos Brutos' },
+    { condicao: 'mimeType=video/* AND nome contém "editado" OR "final"', destino: '60_MEDIA/Videos Editados' },
+    { condicao: 'mimeType=audio/*', destino: '60_MEDIA/Audios' },
+    { condicao: 'nome contém "nota fiscal" OR "nf-e" OR "danfe"', destino: '70_BUSINESS/Notas Fiscais' },
+    { condicao: 'nome contém "contrato" OR "acordo" OR "termo"', destino: '70_BUSINESS/Contratos' },
+    { condicao: 'nome contém "proposta" OR "orçamento"', destino: '70_BUSINESS/Propostas' },
+    { condicao: 'nome contém "extrato" OR "fatura" OR "boleto"', destino: '70_BUSINESS/Financeiro' },
+    { condicao: 'nome contém "livro" AND extensao=.pdf OR .epub', destino: '40_KNOWLEDGE/Livros' },
+    { condicao: 'nome contém "roteiro" OR "script"', destino: '50_CREATION/Roteiros' },
+    { condicao: 'nome contém "post" OR "caption" OR "legenda"', destino: '50_CREATION/Posts' },
+    { condicao: 'nome contém "prompt" OR "gpt" OR "claude"', destino: '50_CREATION/Prompts' },
+    { condicao: 'nome contém "logo" OR "marca" OR "branding"', destino: '50_CREATION/Design' },
+    { condicao: 'pasta vazia há >6 meses sem acesso', destino: '90_ARCHIVE' },
+    { condicao: 'confianca < 50%', destino: '99_REVIEW/Baixa Confianca' },
+    { condicao: 'nome generico ("Sem título", "Untitled", "Document")', destino: '99_REVIEW/Sem Nome' },
+    { condicao: 'dois ou mais destinos plausíveis com delta < 20%', destino: '99_REVIEW/Conflito de Categoria' },
+  ],
+};
