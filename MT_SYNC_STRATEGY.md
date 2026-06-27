@@ -8,7 +8,7 @@ Construir um ecossistema de conhecimento distribuído onde:
 - **Notion** = sistema operacional relacional (vivo, conectável)
 - **Obsidian** = segundo cérebro versionado (pesquisável, permanente)
 - **Google Drive** = cofre seguro (arquivos, media, backup)
-- **MT Sync Engine** = orquestrador silencioso (zero AI na rotina)
+- **MT Sync Engine** = orquestrador silencioso (execução determinística local, IA apenas para exceções)
 
 ## Fluxo de Dados
 
@@ -52,18 +52,18 @@ Google Drive (Cofre)
 
 ### 1. Programação antes de IA
 
-| Tarefa | Solução | Tokens |
+| Tarefa | Solução | Execução |
 |--------|---------|--------|
-| Exportar Notion | API + Python | 0 |
-| Comparar hashes | SQLite | 0 |
-| Gerar Markdown | Regex + Determinístico | 0 |
-| Criar backlinks | Link extractor | 0 |
-| Detectar mudanças | Timestamp comparison | 0 |
-| **Sumarizar artigo** | Claude | ~500 |
-| **Descobrir conexões** | Claude | ~800 |
-| **Gerar insights** | Claude | ~1000 |
+| Exportar Notion | API + Python | Determinística local |
+| Comparar hashes | SQLite | Determinística local |
+| Gerar Markdown | Regex + Determinístico | Determinística local |
+| Criar backlinks | Link extractor | Determinística local |
+| Detectar mudanças | Timestamp comparison | Determinística local |
+| **Sumarizar artigo** | Claude | IA (fora do fluxo operacional) |
+| **Descobrir conexões** | Claude | IA (fora do fluxo operacional) |
+| **Gerar insights** | Claude | IA (fora do fluxo operacional) |
 
-**Meta:** 95%+ das operações sem IA. IA = curadoria e descoberta, não automação.
+**Meta:** 95%+ execução determinística local. IA = curadoria e descoberta, não automação operacional.
 
 ### 2. Incremental, nunca rebuild
 
@@ -280,7 +280,8 @@ claude.summarize(obsidian.read("40_Knowledge/Neurociência/Paper.md"))
   "assets_downloaded": 34,
   "errors": 0,
   "conflicts": 2,
-  "tokens_spent": 0,
+  "execution_method": "deterministic_local",
+  "ai_used_in_routine": false,
   "index_size_mb": 12
 }
 ```
