@@ -67,7 +67,7 @@ class QuickExecutor:
                     'uuid': meta.uuid,
                     'name': meta.name,
                     'current': f"/root/{meta.name}",
-                    'target': f"/root/{meta.full_path()}/{meta.filename()}",
+                    'target': f"/root/{meta.domain.value}/{meta.subdomain}/{meta.filename()}",
                     'domain': meta.domain.value,
                     'confidence': meta.confidence.name
                 })
@@ -122,14 +122,31 @@ class QuickExecutor:
         return 0
 
     def _get_sample_files(self):
-        """Em produção, vem de Drive API. Aqui: sample para demo."""
+        """Classified files from MT.OS Drive scan (2026-06-28). Replace with live Drive API call in production."""
         return [
-            {'name': 'Documento.pdf', 'size': 500000, 'mimeType': 'application/pdf'},
-            {'name': 'foto.jpg', 'size': 2000000, 'mimeType': 'image/jpeg'},
-            {'name': 'vídeo.mp4', 'size': 500000000, 'mimeType': 'video/mp4'},
-            {'name': 'planilha.xlsx', 'size': 1000000, 'mimeType': 'application/vnd.ms-excel'},
-            {'name': 'relatório contrato.docx', 'size': 500000, 'mimeType': 'application/vnd.ms-word'},
-            {'name': 'arquivo_temp.tmp', 'size': 100000, 'mimeType': 'application/octet-stream'},
+            # 80_PERSONAL
+            {'name': 'travel_insurance_Oliveira_31023341808.pdf', 'driveId': '1rXkDj1IlCRWMVk9_p11JF1lDpg2dZCrO', 'size': 320000, 'mimeType': 'application/pdf', 'createdTime': '2023-10-01T00:00:00Z'},
+            {'name': 'certificado_de_elegibilidade_31023341808.pdf', 'driveId': '1GuwSYBVh6H14T_PriAle37nf3gOQiBZy', 'size': 280000, 'mimeType': 'application/pdf', 'createdTime': '2023-10-01T00:00:00Z'},
+            {'name': 'certificado_de_elegibilidade_27239184838.pdf', 'driveId': '11kA_u16oZZ_l81yfBgXG2oTVgacSHldQ', 'size': 280000, 'mimeType': 'application/pdf', 'createdTime': '2023-10-01T00:00:00Z'},
+            {'name': 'Comprovante-LATAM-LA9578375EKLU.pdf', 'driveId': '1EHejl1qMawSvvA_vGnSHt8grqLtMwxV0', 'size': 150000, 'mimeType': 'application/pdf', 'createdTime': '2023-09-15T00:00:00Z'},
+            {'name': '00001565-Certificado -SP CITY MARATHON 2022.pdf', 'driveId': '1eBBLFPq9o9uPnUi7WcF-UJfS-FyPHYMT', 'size': 500000, 'mimeType': 'application/pdf', 'createdTime': '2022-03-01T00:00:00Z'},
+            # 20_PROJECTS/MT Sports
+            {'name': 'Perfect Trainer | Aplicativo para Personal Trainers.pdf', 'driveId': '1kKoFSxNumyzmU8M32PmQn7Pj3q-Ln1nx', 'size': 1200000, 'mimeType': 'application/pdf', 'createdTime': '2023-05-10T00:00:00Z'},
+            {'name': 'Afundo Lateral c_ Clean + Retrocesso com Ketlebell.mp4', 'driveId': '1jcKEdbth1zGYL_CRSBuSs0pfHDl5D51l', 'size': 85000000, 'mimeType': 'video/mp4', 'createdTime': '2022-08-20T00:00:00Z'},
+            {'name': 'Empurra: Puxa [ Band + Peso ] .mp4', 'driveId': '1vraBYFJPLHRlKQ1BgaUx9uwVOEUKYnhl', 'size': 78000000, 'mimeType': 'video/mp4', 'createdTime': '2022-08-20T00:00:00Z'},
+            {'name': 'Ketlebell Press.mov', 'driveId': '1BamqLBHBS5lhaSBlrlSURF0I4iYewOJn', 'size': 62000000, 'mimeType': 'video/quicktime', 'createdTime': '2022-08-20T00:00:00Z'},
+            {'name': '00000249-COOKIE CUTTER.docx', 'driveId': '10tJHwpY9m4GqPuxmINy08Ic_cZNeI4jW', 'size': 45000, 'mimeType': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'createdTime': '2023-01-15T00:00:00Z'},
+            {'name': '00000370-Michael - Potência.docx', 'driveId': '1seKZAC4xwS0Fwx3OD6ONcV9RuDDpMtm_', 'size': 52000, 'mimeType': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'createdTime': '2023-02-10T00:00:00Z'},
+            {'name': '00000506-Michael Pré-Fadiga.docx', 'driveId': '1z1DaWlplFEwYLkL3jPyISIu0c-2Ny-UZ', 'size': 48000, 'mimeType': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'createdTime': '2023-03-05T00:00:00Z'},
+            {'name': '00000136-Training Session Rotinas Santiago.pdf', 'driveId': '1vFc7IhbEiQhNN4v3kRnK-m5RC0XePYE5', 'size': 380000, 'mimeType': 'application/pdf', 'createdTime': '2022-12-01T00:00:00Z'},
+            {'name': '00001002-V9 Kettlebell NRRU Clubbell.pdf', 'driveId': '1LiCykwvUL73HXUo0lFKSMZw9mMjob5Rb', 'size': 4200000, 'mimeType': 'application/pdf', 'createdTime': '2023-06-01T00:00:00Z'},
+            # 40_KNOWLEDGE
+            {'name': '00001207-Long-Term Effects of Habitual Barefoot review.pdf', 'driveId': '1l0pZQgmoHITBhRhG8AXq-oURIWGtlkZw', 'size': 1800000, 'mimeType': 'application/pdf', 'createdTime': '2023-07-01T00:00:00Z'},
+            {'name': '00001203-Barefoot Versus Shoe Running From the Past to.pdf', 'driveId': '1q_xv_KXh2_2DmPvaTm5xRKUVqIRRHu-C', 'size': 2100000, 'mimeType': 'application/pdf', 'createdTime': '2023-07-01T00:00:00Z'},
+            {'name': '00001206-From barefoot hunter gathering to shod.pdf', 'driveId': '1Wo4hu3UhNAUGVzVrVGo55GcxTqkGXiRA', 'size': 1950000, 'mimeType': 'application/pdf', 'createdTime': '2023-07-01T00:00:00Z'},
+            {'name': '00001202-THE FOOT CORE SYSTEM.pdf', 'driveId': '1tZ-g395p-T63nTpv56RM2n7pj71jf9eO', 'size': 2300000, 'mimeType': 'application/pdf', 'createdTime': '2023-07-01T00:00:00Z'},
+            {'name': '00000135-livro-digital-treinamento-do-core-em-3d.pdf', 'driveId': '1pKQAsLC2ER-SZOZQClWACfqfvqcGo6Pn', 'size': 8500000, 'mimeType': 'application/pdf', 'createdTime': '2022-11-01T00:00:00Z'},
+            {'name': 'Criatividade-e-Inovacao-Francis-2018.pdf', 'driveId': '1bok4nLmwusCf53MwPvW2PCzXPn12PPPY', 'size': 3200000, 'mimeType': 'application/pdf', 'createdTime': '2022-09-15T00:00:00Z'},
         ]
 
     def _classify(self, file):
@@ -139,16 +156,18 @@ class QuickExecutor:
             file.get('mimeType', ''),
             file.get('size', 0)
         )
-
+        name = file['name']
+        ext = name.split('.')[-1].lower() if '.' in name else ''
         meta = FileMetadata(
-            uuid=file['name'].replace('.', '_')[:20],
-            name=file['name'],
-            ext=file['name'].split('.')[-1].lower() if '.' in file['name'] else '',
+            uuid=file.get('driveId', name.replace('.', '_')[:20]),
+            name=name,
+            ext=ext,
             domain=domain,
-            subdomain=DomainRules.recommend_subdomain(domain, file['name'], ''),
+            subdomain=DomainRules.recommend_subdomain(domain, name, ''),
             confidence=confidence,
             size_bytes=file.get('size', 0),
             mime_type=file.get('mimeType', ''),
+            date_created=file.get('createdTime', ''),
         )
         return meta
 

@@ -74,8 +74,15 @@ class FileMetadata:
 
     def filename(self) -> str:
         """Standardized filename: YYYY-MM-DD_Project_Subject_V01.ext"""
-        date_part = self.date_created.split("T")[0] if self.date_created else "0000-00-00"
-        subject = self.name.replace(" ", "_")
+        date_part = self.date_created.split("T")[0] if self.date_created else ""
+        if not date_part or date_part == "0000-00-00":
+            from datetime import date
+            date_part = date.today().isoformat()
+        # Strip extension from name to avoid double extension
+        base = self.name
+        if self.ext and base.lower().endswith("." + self.ext.lower()):
+            base = base[: -(len(self.ext) + 1)]
+        subject = base.replace(" ", "_")
         if self.project:
             return f"{date_part}_{self.project}_{subject}_{self.version}.{self.ext}"
         return f"{date_part}_{subject}_{self.version}.{self.ext}"
