@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MT.OS — Mapa do Drive</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    background: #0a0a0f;
+    color: #e8e8f0;
+    min-height: 100vh;
+    padding: 48px 24px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 64px;
+  }
+
+  .header h1 {
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #c8b8ff, #7c6aff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header .sub {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #555570;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .header .date {
+    margin-top: 16px;
+    font-size: 13px;
+    color: #3a3a55;
+  }
+
+  /* ── Summary Bar ── */
+  .summary-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    max-width: 900px;
+    margin: 0 auto 64px;
+  }
+
+  .stat {
+    background: #12121e;
+    border: 1px solid #1e1e30;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat .num {
+    font-size: 32px;
+    font-weight: 700;
+    color: #7c6aff;
+  }
+
+  .stat .label {
+    font-size: 11px;
+    color: #44445a;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-top: 4px;
+  }
+
+  /* ── Domains Grid ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto 64px;
+  }
+
+  .domain {
+    background: #0e0e1a;
+    border: 1px solid #1a1a28;
+    border-radius: 16px;
+    padding: 24px;
+    transition: border-color 0.2s;
+  }
+
+  .domain:hover { border-color: #3a3a60; }
+
+  .domain-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .domain-icon {
+    font-size: 28px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .domain-title-block { flex: 1; }
+
+  .domain-code {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .domain-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #e8e8f0;
+  }
+
+  .domain-desc {
+    font-size: 12px;
+    color: #44445a;
+    margin-top: 2px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .badge.ok    { background: #0d2d1a; color: #2ecc71; }
+  .badge.pending { background: #2d1f00; color: #f39c12; }
+  .badge.empty { background: #151522; color: #333355; }
+  .badge.warn  { background: #2d0d0d; color: #e74c3c; }
+
+  .sub-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .sub-item {
+    background: #16162a;
+    border: 1px solid #22223a;
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: #8888bb;
+  }
+
+  .sub-item.depth2 {
+    background: #0f0f1f;
+    border-color: #1a1a30;
+    color: #5555888;
+    font-size: 10px;
+  }
+
+  .files-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #14142a;
+  }
+
+  .files-label { font-size: 11px; color: #33335a; }
+  .files-count { font-size: 13px; font-weight: 600; }
+
+  /* ── Color accents per domain ── */
+  .d00 .domain-code { color: #6666aa; }
+  .d10 .domain-code { color: #4499cc; }
+  .d20 .domain-code { color: #7c6aff; }
+  .d30 .domain-code { color: #44bbaa; }
+  .d40 .domain-code { color: #cc99ff; }
+  .d50 .domain-code { color: #ff9944; }
+  .d60 .domain-code { color: #ff6688; }
+  .d70 .domain-code { color: #44cc88; }
+  .d80 .domain-code { color: #ffcc44; }
+  .d90 .domain-code { color: #888899; }
+  .d99 .domain-code { color: #ff4444; }
+
+  .d00 .files-count { color: #6666aa; }
+  .d10 .files-count { color: #4499cc; }
+  .d20 .files-count { color: #7c6aff; }
+  .d30 .files-count { color: #44bbaa; }
+  .d40 .files-count { color: #cc99ff; }
+  .d50 .files-count { color: #ff9944; }
+  .d60 .files-count { color: #ff6688; }
+  .d70 .files-count { color: #44cc88; }
+  .d80 .files-count { color: #ffcc44; }
+  .d90 .files-count { color: #888899; }
+  .d99 .files-count { color: #ff4444; }
+
+  /* ── Diagnostic Table ── */
+  .section-title {
+    text-align: center;
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #333355;
+    margin-bottom: 24px;
+  }
+
+  .table-wrap {
+    max-width: 1100px;
+    margin: 0 auto 64px;
+    border: 1px solid #1a1a28;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    background: #0e0e1a;
+    color: #44445a;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 10px;
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid #1a1a28;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #0e0e1a;
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover { background: #0f0f1e; }
+  tbody tr:last-child { border-bottom: none; }
+
+  tbody td {
+    padding: 12px 16px;
+    color: #9999bb;
+  }
+
+  tbody td:first-child { color: #e8e8f0; font-weight: 500; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .tag.alta  { background: #0d2d1a; color: #2ecc71; }
+  .tag.media { background: #2d1f00; color: #f39c12; }
+  .tag.baixa { background: #2d0d0d; color: #e74c3c; }
+
+  .tag.mover   { background: #0a1a2d; color: #4499cc; }
+  .tag.revisao { background: #1a1a0a; color: #ccaa22; }
+  .tag.lixeira { background: #1a0a0a; color: #cc4444; }
+  .tag.notocar { background: #111122; color: #444466; }
+
+  /* ── Rules ── */
+  .rules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto 64px;
+  }
+
+  .rule {
+    background: #0e0e1a;
+    border-left: 3px solid #7c6aff;
+    border-radius: 0 10px 10px 0;
+    padding: 14px 18px;
+  }
+
+  .rule .r-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #7c6aff;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .rule p { font-size: 12px; color: #55557a; line-height: 1.5; }
+
+  .rule.warn { border-left-color: #ff4444; }
+  .rule.warn .r-title { color: #ff4444; }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    color: #22223a;
+    font-size: 12px;
+    padding-top: 32px;
+    border-top: 1px solid #0f0f1a;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>MT.OS</h1>
+  <div class="sub">Mapa do Drive · Diagnóstico Completo</div>
+  <div class="date">2026-06-28 &nbsp;·&nbsp; READ-ONLY &nbsp;·&nbsp; Nenhum arquivo foi movido aqui</div>
+</div>
+
+<!-- Summary -->
+<div class="summary-bar">
+  <div class="stat">
+    <div class="num">11</div>
+    <div class="label">Domínios</div>
+  </div>
+  <div class="stat">
+    <div class="num">89</div>
+    <div class="label">Subpastas</div>
+  </div>
+  <div class="stat">
+    <div class="num">~2.135</div>
+    <div class="label">Arquivos mapeados</div>
+  </div>
+  <div class="stat">
+    <div class="num">~2.300</div>
+    <div class="label">Duplicatas (lixeira)</div>
+  </div>
+</div>
+
+<!-- Domain Cards -->
+<div class="grid">
+
+  <!-- 00 -->
+  <div class="domain d00">
+    <div class="domain-header">
+      <div class="domain-icon">⚙️</div>
+      <div class="domain-title-block">
+        <div class="domain-code">00 · Sistema</div>
+        <div class="domain-name">Backups & Configs</div>
+        <div class="domain-desc">Máquinas, exports, vault</div>
+      </div>
+      <span class="badge empty">Vazio</span>
+    </div>
+    <div class="sub-list">
+      <span class="sub-item">Apple Backups</span>
+      <span class="sub-item">Meu iMac</span>
+      <span class="sub-item">Meu MacBook Air</span>
+      <span class="sub-item">iCloud Sync</span>
+      <span class="sub-item">Dados Técnicos</span>
+      <span class="sub-item">Notion Exports</span>
+      <span class="sub-item">Obsidian Vault</span>
+      <span class="sub-item">Banco de Recuperação</span>
+    </div>
+    <div class="files-row">
+      <span class="files-label">Arquivos confirmados</span>
+      <span class="files-count">0</span>
+    </div>
+  </div>
+
+  <!-- 10 -->
+  <div class="domain d10">
+    <div class="domain-header">
+      <div class="domain-icon">📥</div>
+      <div class="domain-title-block">
+        <div class="domain-code">10 · Entrada</div>
+        <div class="domain-name">Inbox</div>
+        <div class="domain-desc">Tudo que chega sem destino</div>
+      </div>
+      <span class="badge empty">Vazio</span>
+    </div>
+    <div class="sub-list">
+      <span class="sub-item">Captura</span>
+      <span class="sub-item">Downloads</span>
+      <span class="sub-item">Sem Categoria</span>
+      <span class="sub-item">Revisão Semanal</span>
+      <span class="sub-item">IA Imports</span>
+      <span class="sub-item">Processar</span>
+    </div>
+    <div class="files-row">
+      <span class="files-label">Arquivos confirmados</span>
+      <span class="files-count">0</span>
+    </div>
+  </div>
+
+  <!-- 20 -->
+  <div class="domain d20">
+    <div class="domain-header">
+      <div class="domain-icon">🚀</div>
+      <div class="domain-title-block">
+        <div class="domain-code">20 · Projetos</div>
+        <div class="domain-name">Projetos Ativos</div>
+        <div class="domain-desc">MT.OS · MT Sports · Clientes</div>
+      </div>
+      <span class="badge ok">10 arquivos</span>
+    </div>
+    <div class="sub-list">
+      <span class="sub-item">MT.OS</span>
+      <span class="sub-item depth2">↳ ERP</span>
+      <span class="sub-item depth2">↳ CEREPRO</span>
+      <span class="sub-item depth2">↳ Framework</span>
+      <span class="sub-item depth2">↳ Documentação</span>
+      <span class="sub-item depth2">↳ Dashboards</span>
+      <span class="sub-item depth2">↳ Roadmap</span>
+      <span class="sub-item">MT Sports</span>
+      <span class="sub-item depth2">↳ Programas</span>
+      <span class="sub-item depth2">↳ Atletas</span>
+      <span class="sub-item depth2">↳ Competições</span>
+      <span class="sub-item depth2">↳ Produtos</span>
+      <span class="sub-item">Clientes</span>
+      <span class="sub-item depth2">↳ Ativos</span>
+      <span class="sub-item depth2">↳ Finalizados</span>
+      <span class="sub-item depth2">↳ Empresas</span>
+      <span class="sub-item">Projetos Encerrados</span>
+    </div>
+    <div class="files-row">
+      <span class="files-label">PDFs treino · vídeos · planilhas</span>
+      <span class="files-count">10</span>
+    </div>
+  </div>
+
+  <!-- 30 -->
+  <div class="domain d30">
+    <div class="domain-header">
+      <div class="domain-icon">🌀</div>
+      <div class="domain-title-block">
+        <div class="domain-code">30 · Áreas</div>
+        <div class="domain-name">Áreas de Vida</div>
+        <div class="domain-desc">Corpo · Mente · Observador</div>
+      </div>
+      <span class="badge empty">Vazio</span>
+    </div>
+    <div class="sub-list">
+      <span class="sub-item">Corpo</span>
+      <span class="sub-item depth2">↳ Avaliações</span>
+      <span class="sub-item depth2">↳ Protocolos</span>
+      <span class="sub-item depth2">↳ FitMoves</span>
+      <span class="sub-item">Mente</span>
+      <span class="sub-item depth2">↳ Design</span>
+      <span class="sub-item depth2">↳ Negócios</span>
+      <span class="sub-item depth2">↳ Marketing</span>
+      <span class="sub-item depth2">↳ Psicologia</span>
+      <span class="sub-item">Observador</span>
+      <span class="sub-item depth2">↳ Arquétipos</span>
+      <span class="sub-item depth2">↳ Taoísmo</span>
+      <span class="sub-item depth2">↳ Sufismo</span>
+      <span class="sub-item depth2">↳ Meditação</span>
+      <span class="sub-item depth2">↳ Consciência</span>
+    </div>
+    <div class="files-row">
+      <span class="files-label">Arquivos confirmados</span>
+      <span class="files-count">0</span>
+    </div>
+  </div>
+
+  <!-- 40 -->
+  <div class="domain d40">
+    <div class="domain-header">
+      <div class="domain-icon">📚</div>
+      <div class="domain-title-block">
+        <div class="domain-code">40 · Conhecimento</div>
+        <div class="domain-name">Livros, Papers, Cursos</div>
+        <div class="domain-desc">Pesquisa · Referências · Estudo</div>
+      </div>
+      <span class="badge ok">11 + 4 rev.</span>
+    </div>
+    <div class="sub-list">
+      <span class="sub-item">Livros</span>
+      <span class="sub-item depth2">↳ IHP</span>
+      <span class="sub-item depth2">↳ Corrida</span>
+      <span class="sub-item depth2">↳ Negócios</span>
+      <span class="sub-item depth2">↳ Branding</span>
+      <span class="sub-item depth2">↳ Filosofia</span>
+      <span class="sub-item">PDFs</span>
+      <span class="sub-item">Pesquisas</span>
+      <span class="sub-item">Estudos</span>
+      <span class="sub-item">Referências</span>
+      <span class="sub-item">Artigos</span>
+      <span class="sub-item">Banco de Conhecimento</span>
+      <span class="sub-item">Cursos</span>
+    </div>
+    <div class="files-row">
+      <span class="files-label">9 papers barefoot · 2 livros · 4 ebooks em revisão</span>
+      <span class="files-count">15</span>
+    </div>
+  </div>
+
+  <!-- 50 -->
+  <div class="domain d50">
+    <div class="domain-header">
+      <div class="domain-icon">✍️</div>
+      <div class="domain-title-block">
+        <div class="domain-code">50 · Criação</div>
+        <div class="domain-name">Produção de Conteúdo</div>
+        <div class="domain-desc">Cursos · Branding · Templates</div>
+      </div>
+      <span class="badge empty">Vazio</span>
+    </div>
+    <div class="sub-list">
+      <span class="sub-item">Cursos Autorais</span>
+      <span class="sub-item">Apresentações</span>
+      <span class="sub-item">Logos</span>
+      <span class="sub-item">Branding</span>
+      <span class="sub-item">Assets</span>
+      <span class="sub-item">Templates</span>
+      <span class="sub-item">Copywriting</span>
+      <span class="sub-item">Vídeos Editados</span>
+      <span class="sub-item">Materiais de Marketing</span>
+    </div>
+    <div class="files-row">
+      <span class="files-label">Arquivos confirmados</span>
+      <span class="files-count">0</span>
+    </div>
+  </div>
+
+  <!-- 60 -->
+  <div class="domain d60">
+    <div class="domain-header">
+      <div class="domain-icon">🎞️</div>
+      <div class="domain-title-block">
+        <div class="domain-code">60 · Mídia</div>
+        <div class="domain-name">Fotos & Vídeos Brutos</div>
+        <div class="domain-desc">WhatsApp · Treinos · Família</div>
+      </div>
+      <span class="badge ok">~2.100</span>
+    </div>
+    <div class="sub-list">
+      <span class="sub-item">Fotos</span>
+      <span class="sub-item depth2">↳ Família</span>
+      <span class="sub-item depth2">↳ Alice</span>
+      <span class="sub-item depth2">↳ Eventos</span>
+      <span class="sub-item depth2">↳ Treinos</span>
+      <span class="sub-item depth2">↳ Branding</span>
+      <span class="sub-item">Vídeos</span>
+      <span class="sub-item">Gravações de Tela</span>
+      <span class="sub-item">Brutos</span>
+      <span class="sub-item">Podcasts</span>
+    </div>
+    <div class="files-row">
+      <span class="files-label">1.400 fotos · 500 vídeos · 200 stickers (WhatsApp)</span>
+      <span class="files-count">~2.100</span>
+    </div>
+  </div>
+
+  <!-- 70 -->
+  <div class="domain d70">
+    <div class="domain-header">
+      <div class="domain-icon">💼</div>
+      <div class="domain-title-block">
+        <div class="domain-code">70 · Empresa</div>
+        <div class="domain-name">Financeiro & RH</div>
+        <div class="domain-desc">Contratos · Parceiros · Estratégia</div>
+      </div>
+      <span class="badge empty">Vazio</span>
+    </div>
+    <div class="sub-list">
+      <span class="sub-item">Financeiro</span>
+      <span class="sub-item depth2">↳ Fluxo de Caixa</span>
+      <span class="sub-item depth2">↳ Impostos</span>
+      <span class="sub-item depth2">↳ Bancos</span>
+      <span class="sub-item depth2">↳ Investimentos</span>
+      <span class="sub-item">RH</span>
+      <span class="sub-item">Parceiros</span>
+      <span class="sub-item">Estratégia</span>
+    </div>
+    <div class="files-row">
+      <span class="files-label">Arquivos confirmados</span>
+      <span class="files-count">0</span>
+    </div>
+  </div>
+
+  <!-- 80 -->
+  <div class="domain d80">
+    <div class="domain-header">
+      <div class="domain-icon">🪪</div>
+      <div class="domain-title-block">
+        <div class="domain-code">80 · Pessoal</div>
+        <div class="domain-name">Documentos Pessoais</div>
+        <div class="domain-desc">Certificados · Viagens · Saúde</div>
+      </div>
+      <span class="badge ok">6 arquivos</span>
+    </div>
+    <div class="sub-list">
+      <span class="sub-item">Certificados</span>
+      <span class="sub-item">Objetivos Pessoais</span>
+    </div>
+    <div style="margin-top:12px; font-size:11px; color:#44445a; line-height:1.7;">
+      Seguro viagem Oliveira<br>
+      Certificado elegibilidade ×2<br>
+      Comprovante LATAM LA9578375EKLU<br>
+      Certificado SP City Marathon 2022
+    </div>
+    <div class="files-row">
+      <span class="files-label">Confirmados · alta confiança</span>
+      <span class="files-count">6</span>
+    </div>
+  </div>
+
+  <!-- 90 -->
+  <div class="domain d90">
+    <div class="domain-header">
+      <div class="domain-icon">🗄️</div>
+      <div class="domain-title-block">
+        <div class="domain-code">90 · Arquivo</div>
+        <div class="domain-name">Histórico & Legado</div>
+        <div class="domain-desc">Encerrado · Versões antigas</div>
+      </div>
+      <span class="badge empty">Vazio</span>
+    </div>
+    <div class="sub-list">
+      <span class="sub-item">Projetos Antigos</span>
+      <span class="sub-item">Cursos Antigos</span>
+      <span class="sub-item">Backups</span>
+      <span class="sub-item">Histórico</span>
+      <span class="sub-item">Versões Antigas</span>
+      <span class="sub-item">Material Legado</span>
+    </div>
+    <div class="files-row">
+      <span class="files-label">Arquivos confirmados</span>
+      <span class="files-count">0</span>
+    </div>
+  </div>
+
+  <!-- 99 -->
+  <div class="domain d99">
+    <div class="domain-header">
+      <div class="domain-icon">🔍</div>
+      <div class="domain-title-block">
+        <div class="domain-code">99 · Revisão</div>
+        <div class="domain-name">Em Dúvida → Aqui</div>
+        <div class="domain-desc">Nunca apaga. Revisa depois.</div>
+      </div>
+      <span class="badge pending">8 aguardam</span>
+    </div>
+    <div class="sub-list">
+      <span class="sub-item">Revisar</span>
+      <span class="sub-item">Possível Exclusão</span>
+      <span class="sub-item">Classificação Manual</span>
+    </div>
+    <div style="margin-top:12px; font-size:11px; color:#44445a; line-height:1.7;">
+      4 ebooks com nome UUID (sem contexto)<br>
+      3 arquivos de mídia anônimos (UUID.jpg · .MOV)<br>
+      1 arquivo de origem desconhecida
+    </div>
+    <div class="files-row">
+      <span class="files-label">Aguardando inspeção manual</span>
+      <span class="files-count">8</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Diagnostic Table -->
+<p class="section-title">Diagnóstico — Buckets Encontrados</p>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Arquivo / Grupo</th>
+        <th>Bucket</th>
+        <th>Destino MT.OS</th>
+        <th>Qtd.</th>
+        <th>Confiança</th>
+        <th>Ação</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>travel_insurance_Oliveira_31023341808.pdf</td>
+        <td>A</td>
+        <td>80_PESSOAL</td>
+        <td>1</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER</span></td>
+      </tr>
+      <tr>
+        <td>certificado_de_elegibilidade_*.pdf ×2</td>
+        <td>A</td>
+        <td>80_PESSOAL</td>
+        <td>2</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER</span></td>
+      </tr>
+      <tr>
+        <td>Comprovante-LATAM-LA9578375EKLU.pdf</td>
+        <td>A</td>
+        <td>80_PESSOAL</td>
+        <td>1 (+1 dup)</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER</span></td>
+      </tr>
+      <tr>
+        <td>00001565-Certificado -SP CITY MARATHON 2022.pdf</td>
+        <td>A</td>
+        <td>80_PESSOAL/Certificados</td>
+        <td>1</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER</span></td>
+      </tr>
+      <tr>
+        <td>Perfect Trainer | Aplicativo para Personal Trainers.pdf</td>
+        <td>A</td>
+        <td>20_PROJETOS/MT Sports</td>
+        <td>1</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER</span></td>
+      </tr>
+      <tr>
+        <td>Afundo Lateral · Empurra Puxa · Ketlebell Press</td>
+        <td>A</td>
+        <td>20_PROJETOS/MT Sports</td>
+        <td>3 vídeos</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER</span></td>
+      </tr>
+      <tr>
+        <td>00000249-COOKIE CUTTER.docx</td>
+        <td>B</td>
+        <td>20_PROJETOS/MT Sports/Programas</td>
+        <td>1</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER</span></td>
+      </tr>
+      <tr>
+        <td>Michael - Potência.docx · Michael Pré-Fadiga.docx</td>
+        <td>B</td>
+        <td>20_PROJETOS/MT Sports/Atletas</td>
+        <td>3 (+1 dup)</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER</span></td>
+      </tr>
+      <tr>
+        <td>Training Session Rotinas Santiago.pdf</td>
+        <td>B</td>
+        <td>20_PROJETOS/MT Sports/Atletas</td>
+        <td>1</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER</span></td>
+      </tr>
+      <tr>
+        <td>V9 Kettlebell NRRU Clubbell.pdf</td>
+        <td>B</td>
+        <td>20_PROJETOS/MT Sports</td>
+        <td>1 (+1 dup)</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER</span></td>
+      </tr>
+      <tr>
+        <td>Papers barefoot running (9 artigos)</td>
+        <td>B</td>
+        <td>40_CONHECIMENTO/Artigos</td>
+        <td>9 (+1 dup)</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER</span></td>
+      </tr>
+      <tr>
+        <td>livro-digital-treinamento-do-core-em-3d.pdf</td>
+        <td>B</td>
+        <td>40_CONHECIMENTO/Livros</td>
+        <td>1</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER</span></td>
+      </tr>
+      <tr>
+        <td>Criatividade-e-Inovacao-Francis-2018.pdf</td>
+        <td>A</td>
+        <td>40_CONHECIMENTO/Livros</td>
+        <td>1</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER</span></td>
+      </tr>
+      <tr>
+        <td>ebook_UUID-*.pdf ×4</td>
+        <td>B</td>
+        <td>99_REVISÃO</td>
+        <td>4 (+1 dup)</td>
+        <td><span class="tag media">MÉDIA</span></td>
+        <td><span class="tag revisao">REVISAR</span></td>
+      </tr>
+      <tr>
+        <td>00000XXX-PHOTO-*.jpg (~1.400 fotos)</td>
+        <td>B</td>
+        <td>60_MÍDIA/Fotos</td>
+        <td>~1.400</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER (lote)</span></td>
+      </tr>
+      <tr>
+        <td>00000XXX-VIDEO-*.mp4 (~500 vídeos)</td>
+        <td>B</td>
+        <td>60_MÍDIA/Vídeos</td>
+        <td>~500</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER (lote)</span></td>
+      </tr>
+      <tr>
+        <td>00000XXX-STICKER-*.webp (~200)</td>
+        <td>B</td>
+        <td>60_MÍDIA</td>
+        <td>~200</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER (lote)</span></td>
+      </tr>
+      <tr>
+        <td>Captura de Tela *.png (screenshots)</td>
+        <td>B</td>
+        <td>60_MÍDIA/Gravações de Tela</td>
+        <td>vários</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag mover">MOVER (lote)</span></td>
+      </tr>
+      <tr>
+        <td>UUID.MOV · UUID.jpg (sem contexto)</td>
+        <td>B</td>
+        <td>99_REVISÃO</td>
+        <td>4</td>
+        <td><span class="tag baixa">BAIXA</span></td>
+        <td><span class="tag revisao">REVISAR</span></td>
+      </tr>
+      <tr>
+        <td style="color:#cc4444;">Bucket C inteiro (~2.300 arquivos)</td>
+        <td>C</td>
+        <td>—</td>
+        <td>~2.300</td>
+        <td><span class="tag alta">ALTA</span></td>
+        <td><span class="tag lixeira">LIXEIRA</span></td>
+      </tr>
+      <tr>
+        <td style="color:#333355;">Arquivos iCloud (plist · sqlite · shadow · índices)</td>
+        <td>Vários</td>
+        <td>—</td>
+        <td>~300+</td>
+        <td>—</td>
+        <td><span class="tag notocar">NÃO TOCAR</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Rules -->
+<p class="section-title">Regras Absolutas</p>
+
+<div class="rules-grid">
+  <div class="rule warn">
+    <div class="r-title">Nunca Apagar</div>
+    <p>Arquivos são movidos, jamais deletados. Exceção única: Bucket C (cópias 100% idênticas ao B).</p>
+  </div>
+  <div class="rule warn">
+    <div class="r-title">Nunca Sobrescrever</div>
+    <p>Se já existe arquivo no destino → 99_REVISÃO, não sobrescreve.</p>
+  </div>
+  <div class="rule warn">
+    <div class="r-title">Nunca Duplicar</div>
+    <p>Usa <code>moveTo()</code>, jamais <code>copyTo()</code>. O original sai do bucket de origem.</p>
+  </div>
+  <div class="rule">
+    <div class="r-title">Nunca Tocar Sistema</div>
+    <p>.plist · .sqlite · .shadow · indexScores · psi.sqlite — intocáveis, qualquer que seja o destino.</p>
+  </div>
+  <div class="rule">
+    <div class="r-title">Nunca Renomear Notas</div>
+    <p>Notas do Notion e Obsidian nunca são renomeadas. Apenas arquivos comuns seguem o padrão MT.OS.</p>
+  </div>
+  <div class="rule">
+    <div class="r-title">Em Dúvida → 99</div>
+    <p>Qualquer incerteza vai para 99_REVISÃO primeiro. Nunca para a lixeira diretamente.</p>
+  </div>
+  <div class="rule">
+    <div class="r-title">Padrão de Nome</div>
+    <p>Documentos: <code>AAAA-MM-DD_assunto_v01.ext</code><br>Fotos: <code>AAAA-MM_descricao.jpg</code></p>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  MT.OS · Diagnóstico 2026-06-28 · Este arquivo é somente leitura — nenhum arquivo foi movido aqui.<br>
+  Para executar: script.google.com → drive_organizer.gs → dryRun() → organize()
+</footer>
+
+</body>
+</html>
