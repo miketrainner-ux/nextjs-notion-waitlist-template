@@ -1,0 +1,25 @@
+# MT Sync Engine Configuration
+# Copy to mt_sync.yaml and fill in your values
+# Environment variables override these settings
+
+# Notion
+notion_token: null  # Set NOTION_TOKEN env var or here
+notion_root_page_id: null  # Optional: scope to subtree
+
+# Obsidian
+obsidian_vault_path: /path/to/obsidian/vault
+obsidian_attachments_dir: _attachments
+
+# Engine
+index_db_path: mt_sync_index.db
+log_dir: mt_sync_logs
+backup_dir: mt_sync_backups
+batch_size: 50
+max_retries: 3
+request_delay_ms: 333  # ~3 req/s for Notion rate limit
+
+# Sync behaviour
+dry_run: false              # Simulate without writing
+full_rebuild: false         # Ignore index, re-export everything
+download_assets: true       # Copy PDFs, images, attachments
+taxonomy_locked: true       # Prevent auto-creation of folders

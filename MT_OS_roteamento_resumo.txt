@@ -1,0 +1,121 @@
+============================================================
+Total pastas analisadas: 2625
+============================================================
+
+## Distribuição por destino MT.OS:
+
+   1317 ( 50.2%)  →  99_REVIEW
+    598 ( 22.8%)  →  90_ARCHIVE
+    418 ( 15.9%)  →  40_KNOWLEDGE/Cursos
+    136 (  5.2%)  →  00_SYSTEM
+     41 (  1.6%)  →  30_AREAS/Mente
+     23 (  0.9%)  →  40_KNOWLEDGE
+     19 (  0.7%)  →  30_AREAS/Corpo
+     16 (  0.6%)  →  70_BUSINESS
+     16 (  0.6%)  →  80_PERSONAL/Saude
+      9 (  0.3%)  →  40_KNOWLEDGE/Livros
+      6 (  0.2%)  →  99_REVIEW/SemNome
+      6 (  0.2%)  →  80_PERSONAL/Familia
+      6 (  0.2%)  →  60_MEDIA
+      4 (  0.2%)  →  20_PROJECTS/MT.OS
+      3 (  0.1%)  →  60_MEDIA/Videos
+      2 (  0.1%)  →  30_AREAS/Observador
+      2 (  0.1%)  →  70_BUSINESS/Financeiro
+      1 (  0.0%)  →  50_CREATION
+      1 (  0.0%)  →  60_MEDIA/Fotos
+      1 (  0.0%)  →  80_PERSONAL
+
+## Exemplos por destino (primeiros 3):
+
+
+### 00_SYSTEM  (136)
+  - BakUP Icloud
+  - MTI- Videos- Backup-iCloud- 2026-05-18
+  - icloud-drive-files-and-documents
+
+### 20_PROJECTS/MT.OS  (4)
+  - MT.OS — Sistema 
+  - MT.OS
+  - com.mtos.MTDelete
+
+### 30_AREAS/Corpo  (19)
+  - 50.2_Livros-Performance
+  - 42K IHP
+  - ESPIRITUALIDADE NA CORRIDA
+
+### 30_AREAS/Mente  (41)
+  - 50.3_Livros-Negocios
+  - 50.4_Livros-Branding
+  - 70.3_Prompts-IA
+
+### 30_AREAS/Observador  (2)
+  - 50.1_Livros-Espiritualidade
+  - ESPIRITUALIDADE
+
+### 40_KNOWLEDGE  (23)
+  - PESQUISA 
+  - PESQUISA
+  - 🎥 PESQUISA DE FILMES  
+
+### 40_KNOWLEDGE/Cursos  (418)
+  - 7
+  - 9
+  - 8
+
+### 40_KNOWLEDGE/Livros  (9)
+  -  PROJETO O LIVRO MT RUN
+  - O LIVRO
+  - LIVRO DE REFERENCIA 
+
+### 50_CREATION  (1)
+  - Logo
+
+### 60_MEDIA  (6)
+  - 🌠 Captura de Tela 
+  - AUDIO IMPORTANTES  
+  - AUDIO
+
+### 60_MEDIA/Fotos  (1)
+  - IMAGEM DE EXERCICOS 
+
+### 60_MEDIA/Videos  (3)
+  - VIDEO
+  - VIDEO
+  - Wondershare Video Converter Ultimate
+
+### 70_BUSINESS  (16)
+  - CONTRATO ALUNOS
+  - Contrato dos professores
+  - Contrato
+
+### 70_BUSINESS/Financeiro  (2)
+  - Banco-de-Exercicios
+  - IMPOSTO DE RENDA 
+
+### 80_PERSONAL  (1)
+  - Carro
+
+### 80_PERSONAL/Familia  (6)
+  - Familia
+  - Familia
+  - Familia
+
+### 80_PERSONAL/Saude  (16)
+  - links de saude
+  - saude
+  - links de saude
+
+### 90_ARCHIVE  (598)
+  - Álbum desconhecido (22-02-2016 19-18-39)
+  - INTRODUÇAO DA HISTORIA DO PASSADO  ( Ramtha )
+  - RAMTHA ORACAO
+
+### 99_REVIEW  (1317)
+  - prepare
+  - ASa
+  - AR0
+
+### 99_REVIEW/SemNome  (6)
+  - pasta sem título 2
+  - Nova pasta
+  - Nova pasta

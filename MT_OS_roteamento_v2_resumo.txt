@@ -1,0 +1,35 @@
+Total: 2625
+
+Distribuição v2.1:
+    907 ( 34.6%)  →  99_REVIEW
+    905 ( 34.5%)  →  90_ARCHIVE
+    282 ( 10.7%)  →  00_SYSTEM
+    214 (  8.2%)  →  60_MEDIA/Fotos
+     68 (  2.6%)  →  30_AREAS/Mente
+     53 (  2.0%)  →  30_AREAS/Corpo
+     42 (  1.6%)  →  40_KNOWLEDGE
+     34 (  1.3%)  →  60_MEDIA/Videos
+     24 (  0.9%)  →  80_PERSONAL/Saude
+     20 (  0.8%)  →  70_BUSINESS
+     17 (  0.6%)  →  50_CREATION
+     15 (  0.6%)  →  80_PERSONAL/Familia
+     15 (  0.6%)  →  40_KNOWLEDGE/Livros
+      6 (  0.2%)  →  60_MEDIA
+      5 (  0.2%)  →  99_REVIEW/SemNome
+      4 (  0.2%)  →  30_AREAS/Observador
+      3 (  0.1%)  →  70_BUSINESS/Financeiro
+      3 (  0.1%)  →  60_MEDIA/Gravacoes
+      3 (  0.1%)  →  60_MEDIA/Reunioes
+      2 (  0.1%)  →  20_PROJECTS/MT.OS
+      2 (  0.1%)  →  40_KNOWLEDGE/Cursos
+      1 (  0.0%)  →  80_PERSONAL
+
+Confiança:
+    667 ( 25.4%)  alta (>=80%)
+    177 (  6.7%)  média (50-80%)
+      0 (  0.0%)  baixa (<50%)
+   1781 ( 67.8%)  zero
+
+Reteste pasta-bug:
+  'BakUP Icloud' → 00_SYSTEM  (override: nome contém '\bbak\s*up|backup|bkp\b')
+  'MTI- Videos- Backup-iCloud- 2026-05-18' → 00_SYSTEM  (override: nome contém '\bbak\s*up|backup|bkp\b')
