@@ -587,20 +587,18 @@ main() {
   preflight
   snapshot
 
-  case "$PHASE" in
-    1|all)
-      phase1_download_stubs
-      ;;&
-    2|all)
-      phase2_index
-      ;;&
-    notes|all)
-      export_notes
-      ;;&
-    3|all)
-      phase3_migrate
-      ;;
-  esac
+  if [[ "$PHASE" == "1" || "$PHASE" == "all" ]]; then
+    phase1_download_stubs
+  fi
+  if [[ "$PHASE" == "2" || "$PHASE" == "all" ]]; then
+    phase2_index
+  fi
+  if [[ "$PHASE" == "notes" || "$PHASE" == "all" ]]; then
+    export_notes
+  fi
+  if [[ "$PHASE" == "3" || "$PHASE" == "all" ]]; then
+    phase3_migrate
+  fi
 
   report
 }
