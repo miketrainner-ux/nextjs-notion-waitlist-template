@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # MT.OS — MIGRAÇÃO iCLOUD → GOOGLE DRIVE
-# Versão: 2.0 — Definitivo
+# Versão: 2.1 — Definitivo
 # Autor: MT.OS
-# Execute: bash mt_migrate.sh [--dry-run] [--phase 1|2|3|all]
+# Execute: bash mt_migrate.sh [--dry-run] [--phase 1|2|3|all] [--check]
 # ─────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
 # ── CONFIGURAÇÃO ──────────────────────────────────────────────
 ICLOUD_ROOT="$HOME/Library/Mobile Documents/com~apple~CloudDocs"
-GDRIVE_REMOTE="gdrive"           # nome do remote rclone para Google Drive
+GDRIVE_REMOTE="gdrive"
 GDRIVE_INBOX="gdrive:📥 INBOX/iCloud-Migration"
 GDRIVE_REVIEW="gdrive:99_Sistema/Revisao-Migracao"
 LOG_DIR="$HOME/MT.OS/logs"
@@ -17,6 +17,7 @@ DB_PATH="$HOME/MT.OS/index.db"
 BATCH_SIZE=50
 DRY_RUN=false
 PHASE="all"
+CHECK_MODE=false
 LOCK_FILE="/tmp/mt_migrate.lock"
 
 # ── PARSE ARGS ────────────────────────────────────────────────
@@ -24,6 +25,7 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     --dry-run) DRY_RUN=true; shift ;;
     --phase)   PHASE="$2"; shift 2 ;;
+    --check)   CHECK_MODE=true; shift ;;
     *) echo "Arg desconhecido: $1"; exit 1 ;;
   esac
 done
@@ -461,6 +463,110 @@ APPLESCRIPT
 }
 
 # ─────────────────────────────────────────────────────────────
+# --check: O QUE JÁ FOI COPIADO
+# ─────────────────────────────────────────────────────────────
+check_copied() {
+  log "=== CHECK — O QUE JÁ FOI COPIADO ==="
+
+  if [ ! -f "$DB_PATH" ]; then
+    warn "Índice não encontrado ($DB_PATH). Rode primeiro sem --check para indexar."
+    exit 0
+  fi
+
+  TOTAL=$(sqlite3    "$DB_PATH" "SELECT COUNT(*) FROM files;")
+  DONE=$(sqlite3     "$DB_PATH" "SELECT COUNT(*) FROM files WHERE status='DONE';")
+  PENDING=$(sqlite3  "$DB_PATH" "SELECT COUNT(*) FROM files WHERE status='PENDING';")
+  ERRORS=$(sqlite3   "$DB_PATH" "SELECT COUNT(*) FROM files WHERE status='ERROR';")
+
+  # Bytes copiados
+  BYTES_DONE=$(sqlite3 "$DB_PATH" \
+    "SELECT COALESCE(SUM(size_bytes),0) FROM files WHERE status='DONE';")
+  BYTES_ALL=$(sqlite3 "$DB_PATH" \
+    "SELECT COALESCE(SUM(size_bytes),0) FROM files;")
+
+  human_size() {
+    local b=$1
+    if   [ "$b" -ge 1073741824 ]; then printf "%.1f GB" "$(echo "scale=1; $b/1073741824" | bc)"
+    elif [ "$b" -ge 1048576 ];    then printf "%.1f MB" "$(echo "scale=1; $b/1048576"    | bc)"
+    elif [ "$b" -ge 1024 ];       then printf "%.1f KB" "$(echo "scale=1; $b/1024"       | bc)"
+    else printf "%d B" "$b"; fi
+  }
+
+  PCT=0
+  [ "$TOTAL" -gt 0 ] && PCT=$(( DONE * 100 / TOTAL ))
+
+  echo ""
+  echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo -e "${BLUE}  RELATÓRIO — O QUE JÁ FOI COPIADO${NC}"
+  echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  printf "  Total indexado : %d arquivos (%s)\n" "$TOTAL" "$(human_size $BYTES_ALL)"
+  printf "  ✅ Copiados     : %d arquivos (%s) — %d%%\n" "$DONE" "$(human_size $BYTES_DONE)" "$PCT"
+  printf "  ⏳ Pendentes    : %d arquivos\n" "$PENDING"
+  printf "  ❌ Com erro     : %d arquivos\n" "$ERRORS"
+  echo ""
+
+  # Barra de progresso visual
+  BAR_DONE=$(( PCT / 5 ))
+  BAR_EMPTY=$(( 20 - BAR_DONE ))
+  printf "  Progresso: ["
+  printf '%0.s█' $(seq 1 $BAR_DONE 2>/dev/null)
+  printf '%0.s░' $(seq 1 $BAR_EMPTY 2>/dev/null)
+  printf "] %d%%\n" "$PCT"
+  echo ""
+
+  # Lista últimos 10 copiados
+  echo "  Últimos 10 copiados:"
+  sqlite3 "$DB_PATH" \
+    "SELECT name, dest_path, size_bytes FROM files
+     WHERE status='DONE' ORDER BY rowid DESC LIMIT 10;" \
+    | while IFS='|' read -r n d s; do
+        printf "    ✅ %-40s → %s\n" "$n" "$d"
+      done
+
+  echo ""
+
+  # Lista erros (se houver)
+  if [ "$ERRORS" -gt 0 ]; then
+    echo "  Arquivos com erro (máx 10):"
+    sqlite3 "$DB_PATH" \
+      "SELECT name, error FROM files WHERE status='ERROR' LIMIT 10;" \
+      | while IFS='|' read -r n e; do
+          printf "    ❌ %-40s — %s\n" "$n" "$e"
+        done
+    echo ""
+    echo "  Para reprocessar os erros:"
+    echo "    sqlite3 $DB_PATH \"UPDATE files SET status='PENDING' WHERE status='ERROR';\""
+    echo "    bash mt_migrate.sh --phase 3"
+  fi
+
+  # Verifica Drive ao vivo (opcional — pode ser lento)
+  if command -v rclone &>/dev/null && rclone listremotes | grep -q "^gdrive:"; then
+    log "Verificando Drive ao vivo (amostra de 20 arquivos DONE)..."
+    MISSING=0
+    sqlite3 "$DB_PATH" \
+      "SELECT dest_path FROM files WHERE status='DONE' AND dest_path IS NOT NULL LIMIT 20;" \
+      | while IFS= read -r dest; do
+          if ! rclone lsf "${GDRIVE_REMOTE}:${dest}" &>/dev/null; then
+            warn "  Não encontrado no Drive: $dest"
+            MISSING=$((MISSING + 1))
+          fi
+        done
+    if [ "$MISSING" -eq 0 ]; then
+      ok "Amostra Drive: todos os 20 verificados existem no destino"
+    else
+      warn "$MISSING arquivos da amostra não encontrados no Drive — rode --phase 3 para recopiar"
+      # Marca como PENDING para reprocessar
+      sqlite3 "$DB_PATH" \
+        "UPDATE files SET status='PENDING' WHERE status='DONE' AND dest_path IN (
+           SELECT dest_path FROM files WHERE status='DONE' LIMIT 20
+         );" 2>/dev/null || true
+    fi
+  fi
+
+  echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+# ─────────────────────────────────────────────────────────────
 # MAIN
 # ─────────────────────────────────────────────────────────────
 main() {
@@ -470,6 +576,13 @@ main() {
   echo -e "${BLUE}║   Fase: $PHASE$(printf '%*s' $((36 - ${#PHASE})) '')║${NC}"
   echo -e "${BLUE}╚═══════════════════════════════════════════╝${NC}"
   echo ""
+
+  # --check encerra aqui (não precisa de preflight completo)
+  if [ "$CHECK_MODE" = true ]; then
+    mkdir -p "$LOG_DIR"
+    check_copied
+    exit 0
+  fi
 
   preflight
   snapshot
