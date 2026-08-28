@@ -14,6 +14,7 @@ GDRIVE_INBOX="gdrive:📥 INBOX/iCloud-Migration"
 GDRIVE_REVIEW="gdrive:99_Sistema/Revisao-Migracao"
 LOG_DIR="$HOME/MT.OS/logs"
 DB_PATH="$HOME/MT.OS/index.db"
+mkdir -p "$LOG_DIR" "$HOME/MT.OS"
 BATCH_SIZE=50
 DRY_RUN=false
 PHASE="all"
